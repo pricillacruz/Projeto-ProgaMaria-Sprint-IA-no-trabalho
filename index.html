@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Início do Dia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://accounts.google.com/gsi/client"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0c10;--surface:#13141a;--surface-2:#1c1e28;
+  --border:rgba(255,255,255,0.07);--text-hi:#f0f1f6;
+  --text-lo:#6b7080;--text-mid:#9ca3b0;
+  --mail:#7c6aff;--meet:#f97316;--task:#22d3a5;
+  --r:18px;--r-sm:10px;--font:'Inter',sans-serif;
+}
+html{scroll-behavior:smooth}
+body{min-height:100vh;background-color:var(--bg);
+  background-image:radial-gradient(ellipse 60% 40% at 10% 0%,rgba(124,106,255,.18) 0%,transparent 60%),
+  radial-gradient(ellipse 50% 40% at 90% 100%,rgba(249,115,22,.12) 0%,transparent 60%);
+  color:var(--text-hi);font-family:var(--font);font-size:16px;line-height:1.6}
+
+/* LOGIN OVERLAY */
+#overlay{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;
+  background:rgba(11,12,16,.97);backdrop-filter:blur(20px);
+  transition:opacity .5s,visibility .5s}
+#overlay.gone{opacity:0;visibility:hidden;pointer-events:none}
+.lcard{background:var(--surface);border:1px solid rgba(255,255,255,.1);border-radius:24px;
+  padding:2.75rem 3rem;max-width:400px;width:90%;text-align:center;
+  box-shadow:0 40px 100px rgba(0,0,0,.6);animation:up .6s cubic-bezier(.22,1,.36,1) both}
+@keyframes up{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+.licon-wrapper{display:flex;align-items:center;justify-content:center;gap:0.75rem;margin-bottom:1.2rem}
+.licon{font-size:3rem;display:inline-block}
+.star-1{animation:float 3.5s ease-in-out infinite}
+.star-2{animation:float 4s ease-in-out infinite 1s}
+.rocket{font-size:3.8rem;animation:float-alt 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px) scale(1.1)}}
+@keyframes float-alt{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-12px) rotate(5deg)}}
+.ltitle{font-size:1.8rem;font-weight:700;margin-bottom:.8rem;line-height:1.3;
+  color:#e9d5ff;text-shadow:0 0 20px rgba(167,139,250,0.5)}
+.ldesc{font-size:.875rem;color:var(--text-lo);margin-bottom:2rem;line-height:1.7}
+.lnote{font-size:.7rem;color:var(--text-lo);margin-top:1rem}
+#btn-login{display:inline-flex;align-items:center;justify-content:center;gap:.65rem;
+  width:100%;padding:.9rem 1.5rem;background:var(--surface-2);
+  border:1px solid rgba(255,255,255,.12);border-radius:12px;
+  color:var(--text-hi);font-family:var(--font);font-size:.9rem;font-weight:500;cursor:pointer;
+  transition:background .2s,border-color .2s,transform .15s}
+#btn-login:hover{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.22);transform:translateY(-1px)}
+#btn-login svg{width:18px;height:18px;flex-shrink:0}
+
+/* TOAST */
+#toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(120px);
+  background:#2a1a1a;border:1px solid rgba(255,100,100,.25);color:#f87171;
+  padding:.8rem 1.5rem;border-radius:12px;font-size:.82rem;z-index:200;
+  transition:transform .35s cubic-bezier(.22,1,.36,1);max-width:90%;text-align:center}
+#toast.show{transform:translateX(-50%) translateY(0)}
+
+/* DASHBOARD */
+#dash{opacity:0;transform:translateY(10px);transition:opacity .5s .1s,transform .5s .1s}
+#dash.visible{opacity:1;transform:none}
+.page{max-width:960px;margin:0 auto;padding:3rem 1.5rem 4rem}
+
+/* USER BAR */
+#userbar{display:none;align-items:center;justify-content:flex-end;gap:.75rem;margin-bottom:2rem}
+#userbar.show{display:flex}
+#uavatar{width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.1);display:none}
+#uname{font-size:.82rem;color:var(--text-mid)}
+#btn-out{font-size:.72rem;color:var(--text-lo);background:none;border:1px solid var(--border);
+  border-radius:8px;padding:.3rem .65rem;cursor:pointer;font-family:var(--font);transition:color .2s,border-color .2s}
+#btn-out:hover{color:var(--text-mid);border-color:rgba(255,255,255,.15)}
+
+/* HEADER */
+header{margin-bottom:3rem}
+.eyebrow{display:flex;align-items:center;gap:.5rem;font-size:.78rem;font-weight:500;
+  letter-spacing:2.5px;text-transform:uppercase;color:var(--text-lo);margin-bottom:.75rem}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--mail);
+  box-shadow:0 0 8px var(--mail);animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+h1{font-size:clamp(2rem,5vw,3.2rem);font-weight:700;letter-spacing:-1px;line-height:1.15;
+  background:linear-gradient(120deg,#f0f1f6 30%,#a78bfa);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:.6rem}
+.hdate{font-size:1rem;color:var(--text-mid)}
+.hdiv{margin-top:2rem;height:1px;
+  background:linear-gradient(90deg,rgba(124,106,255,.5),rgba(249,115,22,.3),transparent)}
+
+/* SECTION LABEL */
+.slabel{font-size:.72rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;
+  color:var(--text-lo);margin-bottom:1.25rem}
+
+/* CARDS */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.25rem}
+.card{position:relative;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);padding:1.75rem;display:flex;flex-direction:column;gap:1rem;overflow:hidden;
+  transition:transform .25s,box-shadow .25s,border-color .25s}
+.card:hover{transform:translateY(-4px);box-shadow:0 20px 60px rgba(0,0,0,.5);border-color:rgba(255,255,255,.13)}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  border-radius:var(--r) var(--r) 0 0;background:var(--ca);opacity:.85}
+.card::after{content:'';position:absolute;top:0;left:0;right:0;height:120px;
+  border-radius:var(--r) var(--r) 0 0;
+  background:radial-gradient(ellipse 80% 60% at 50% 0%,var(--cg) 0%,transparent 75%);pointer-events:none}
+.cm{--ca:var(--mail);--cg:rgba(124,106,255,.12)}
+.cc{--ca:var(--meet);--cg:rgba(249,115,22,.10)}
+.ct{--ca:var(--task);--cg:rgba(34,211,165,.10)}
+.cicon{width:44px;height:44px;border-radius:var(--r-sm);display:grid;place-items:center;
+  background:var(--surface-2);border:1px solid var(--border);font-size:1.3rem;flex-shrink:0}
+.chead{display:flex;align-items:flex-start;justify-content:space-between;gap:.75rem}
+.cbadge{font-size:.68rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;
+  color:var(--ca);background:color-mix(in srgb,var(--ca) 12%,transparent);
+  border:1px solid color-mix(in srgb,var(--ca) 25%,transparent);border-radius:999px;padding:.2rem .65rem}
+.cnum{font-size:3.2rem;font-weight:700;letter-spacing:-2px;line-height:1;color:var(--text-hi)}
+.clbl{font-size:1rem;font-weight:500;color:var(--text-mid)}
+.csub{font-size:.78rem;color:var(--text-lo);padding-top:.5rem;border-top:1px solid var(--border)}
+
+/* SKELETON */
+@keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+.sk{background:linear-gradient(90deg,var(--surface-2) 25%,#24263a 50%,var(--surface-2) 75%);
+  background-size:800px 100%;animation:shimmer 1.6s infinite;border-radius:6px;
+  color:transparent!important;user-select:none;min-width:40px;display:inline-block}
+
+/* AGENDA */
+.asec{margin-top:2.5rem}
+.alist{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.aempty{padding:2rem;text-align:center;color:var(--text-lo);font-size:.9rem}
+.aitem{display:flex;align-items:center;gap:1rem;padding:1.1rem 1.5rem;
+  border-bottom:1px solid var(--border);transition:background .2s}
+.aitem:last-child{border-bottom:none}
+.aitem:hover{background:var(--surface-2)}
+.atime{min-width:52px;font-size:.88rem;font-weight:600;color:var(--meet);font-variant-numeric:tabular-nums}
+.aico{width:36px;height:36px;border-radius:9px;background:var(--surface-2);
+  border:1px solid var(--border);display:grid;place-items:center;font-size:1rem;flex-shrink:0}
+.abody{flex:1;min-width:0}
+.atitle{font-size:.92rem;font-weight:500;color:var(--text-hi);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.adur{font-size:.73rem;color:var(--text-lo);margin-top:.1rem}
+.adot{width:7px;height:7px;border-radius:50%;background:var(--border);flex-shrink:0}
+.adot.next{background:var(--task);box-shadow:0 0 6px var(--task);animation:pulse 2.4s ease-in-out infinite}
+
+/* CHART */
+.chsec{margin-top:2.5rem}
+.chcard{position:relative;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);padding:1.75rem;overflow:hidden;transition:box-shadow .25s}
+.chcard:hover{box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.chcard::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  border-radius:var(--r) var(--r) 0 0;background:linear-gradient(90deg,var(--mail),var(--task))}
+.chcard::after{content:'';position:absolute;top:0;left:0;right:0;height:130px;
+  background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(124,106,255,.09) 0%,transparent 75%);pointer-events:none}
+.chhead{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;margin-bottom:1.5rem}
+.chtitle{font-size:.95rem;font-weight:600;color:var(--text-hi)}
+.chtitle span{display:block;font-size:.75rem;font-weight:400;color:var(--text-lo);margin-top:.1rem}
+.chleg{display:flex;align-items:center;gap:.4rem;font-size:.72rem;color:var(--text-lo)}
+.chlegdot{width:8px;height:8px;border-radius:50%;background:var(--mail);box-shadow:0 0 6px var(--mail)}
+.chwrap{position:relative;height:220px}
+
+footer{margin-top:4rem;text-align:center;font-size:.75rem;color:var(--text-lo)}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="overlay">
+  <div class="lcard">
+    <div class="licon-wrapper">
+      <span class="licon star-1">✨</span>
+      <span class="licon rocket">🚀</span>
+      <span class="licon star-2">✨</span>
+    </div>
+    <p class="ltitle">Dashboard<br>Pricilla Cruz</p>
+    <p class="ldesc">Bem-vinda! Conecte sua conta Google para sincronizar seus e-mails, reuniões e tarefas pendentes em tempo real.</p>
+    <button id="btn-login">
+      <svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+      Entrar com Google
+    </button>
+    <p class="lnote">Acesso somente leitura — sem envio ou modificação de dados.</p>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- DASHBOARD -->
+<div id="dash">
+  <div class="page">
+
+    <div id="userbar">
+      <img id="uavatar" src="" alt="avatar"/>
+      <span id="uname"></span>
+      <button id="btn-out">Sair</button>
+    </div>
+
+    <header>
+      <p class="eyebrow"><span class="dot"></span>Dashboard Pessoal</p>
+      <h1>Por onde começo hoje?</h1>
+      <p class="hdate" id="hdate"></p>
+      <div class="hdiv"></div>
+    </header>
+
+    <p class="slabel">Resumo do dia</p>
+    <div class="cards">
+      <div class="card cm">
+        <div class="chead"><div class="cicon">📩</div><span class="cbadge">Emails</span></div>
+        <div><div class="cnum" id="n-mail">—</div><div class="clbl">Emails não lidos</div></div>
+        <p class="csub" id="sub-mail">Faça login para carregar</p>
+      </div>
+      <div class="card cc">
+        <div class="chead"><div class="cicon">📅</div><span class="cbadge">Agenda</span></div>
+        <div><div class="cnum" id="n-meet">—</div><div class="clbl">Reuniões hoje</div></div>
+        <p class="csub" id="sub-meet">Faça login para carregar</p>
+      </div>
+      <div class="card ct">
+        <div class="chead"><div class="cicon">✅</div><span class="cbadge">Tarefas</span></div>
+        <div><div class="cnum" id="n-task">—</div><div class="clbl">Tarefas pendentes</div></div>
+        <p class="csub" id="sub-task">Faça login para carregar</p>
+      </div>
+    </div>
+
+    <div class="asec">
+      <p class="slabel">Agenda de hoje</p>
+      <div class="alist" id="agenda"><div class="aempty">Faça login para ver seus eventos.</div></div>
+    </div>
+
+    <div class="chsec">
+      <p class="slabel">Volume de emails na semana</p>
+      <div class="chcard">
+        <div class="chhead">
+          <div class="chtitle">Emails recebidos por dia<span id="chsub">Últimos 7 dias</span></div>
+          <div class="chleg"><span class="chlegdot"></span>Emails recebidos</div>
+        </div>
+        <div class="chwrap"><canvas id="emailChart"></canvas></div>
+      </div>
+    </div>
+
+    <footer>Dados reais via Gmail &amp; Google Calendar API.</footer>
+  </div>
+</div>
+
+<script>
+const CLIENT_ID='810541741219-78vmiajr9bos5ceg5n8tsbiu30ueq8ql.apps.googleusercontent.com';
+const SCOPES='https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/tasks.readonly';
+let tok=null,chart=null,tc=null;
+
+// Date header
+(()=>{
+  const o={weekday:'long',year:'numeric',month:'long',day:'numeric'};
+  const s=new Date().toLocaleDateString('pt-BR',o);
+  document.getElementById('hdate').textContent=s[0].toUpperCase()+s.slice(1);
+})();
+
+// Init chart with placeholder
+initChart([12,5,8,20,3,15,9],['Sáb 10/05','Dom 11/05','Seg 12/05','Ter 13/05','Qua 14/05','Qui 15/05','Sex 16/05 ★']);
+
+function getTC(){
+  if(!tc){
+    if(!window.google||!window.google.accounts){showToast('Biblioteca Google ainda carregando. Tente novamente em 2 segundos.');return null;}
+    tc=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:SCOPES,callback:onTok});
+  }
+  return tc;
+}
+
+document.getElementById('btn-login').addEventListener('click',()=>{
+  const c=getTC();
+  if(c)c.requestAccessToken();
+});
+document.getElementById('btn-out').addEventListener('click',()=>{
+  if(tok)google.accounts.oauth2.revoke(tok,()=>{});
+  tok=null;
+  document.getElementById('overlay').classList.remove('gone');
+  document.getElementById('dash').classList.remove('visible');
+  document.getElementById('userbar').classList.remove('show');
+});
+
+async function onTok(r){
+  if(r.error){showToast('Erro no login: '+r.error);return;}
+  tok=r.access_token;
+  document.getElementById('overlay').classList.add('gone');
+  document.getElementById('dash').classList.add('visible');
+  document.getElementById('userbar').classList.add('show');
+  await Promise.all([loadProfile(),loadMail(),loadCal(),loadTasks()]);
+  loadChart();
+}
+
+async function loadProfile(){
+  try{
+    const d=await gf('https://www.googleapis.com/oauth2/v3/userinfo');
+    if(d.name)document.getElementById('uname').textContent=d.name;
+    if(d.picture){const i=document.getElementById('uavatar');i.src=d.picture;i.style.display='block';}
+  }catch(e){}
+}
+
+async function loadTasks(){
+  sk('n-task',true);
+  try{
+    const d=await gf('https://tasks.googleapis.com/tasks/v1/lists/@default/tasks?showCompleted=false');
+    const tasks=(d.items||[]);
+    document.getElementById('n-task').textContent=tasks.length;
+    const dueToday = tasks.filter(t => t.due && new Date(t.due).toDateString() === new Date().toDateString()).length;
+    document.getElementById('sub-task').textContent=dueToday > 0 ? `${dueToday} com prazo para hoje` : 'Nenhuma tarefa vencendo hoje';
+  }catch(e){document.getElementById('n-task').textContent='Err';showToast('Tasks: '+e.message);}
+  finally{sk('n-task',false);}
+}
+
+async function loadMail(){
+  sk('n-mail',true);
+  try{
+    const d=await gf('https://gmail.googleapis.com/gmail/v1/users/me/labels/INBOX');
+    const n=d.messagesUnread??'?';
+    document.getElementById('n-mail').textContent=n;
+    document.getElementById('sub-mail').textContent=n+' não lido'+(n!==1?'s':'')+' na caixa de entrada';
+  }catch(e){document.getElementById('n-mail').textContent='Err';showToast('Gmail: '+e.message);}
+  finally{sk('n-mail',false);}
+}
+
+async function loadCal(){
+  sk('n-meet',true);
+  try{
+    const now=new Date();
+    const s=new Date(now.getFullYear(),now.getMonth(),now.getDate()).toISOString();
+    const e=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1).toISOString();
+    const url='https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin='+encodeURIComponent(s)+'&timeMax='+encodeURIComponent(e)+'&singleEvents=true&orderBy=startTime&maxResults=20';
+    const d=await gf(url);
+    const evs=(d.items||[]).filter(e=>e.status!=='cancelled');
+    document.getElementById('n-meet').textContent=evs.length;
+    const nxt=evs.find(e=>e.start?.dateTime&&new Date(e.start.dateTime)>now);
+    document.getElementById('sub-meet').textContent=nxt?'Próxima: '+ft(nxt.start.dateTime)+'h — '+esc(nxt.summary||'sem título'):'Nenhuma reunião hoje';
+    renderAgenda(evs.slice(0,6));
+  }catch(e){document.getElementById('n-meet').textContent='Err';showToast('Calendar: '+e.message);}
+  finally{sk('n-meet',false);}
+}
+
+function renderAgenda(evs){
+  const el=document.getElementById('agenda');
+  if(!evs.length){el.innerHTML='<div class="aempty">Sem eventos hoje 🎉</div>';return;}
+  const now=new Date();
+  el.innerHTML=evs.map(ev=>{
+    const st=ev.start?.dateTime||ev.start?.date;
+    const t=st?.includes('T')?ft(st):'Dia todo';
+    const min=ev.start?.dateTime&&ev.end?.dateTime?(new Date(ev.end.dateTime)-new Date(ev.start.dateTime))/60000:0;
+    const dur=min?( min<60?min+' min':Math.round(min/60*10)/10+'h'):'Dia todo';
+    const loc=ev.location||'';
+    const meta=[dur,loc].filter(Boolean).join(' · ');
+    const isNxt=ev.start?.dateTime&&new Date(ev.start.dateTime)>now&&(new Date(ev.start.dateTime)-now)<3600000;
+    return`<div class="aitem"><span class="atime">${t}</span><div class="aico">📅</div><div class="abody"><div class="atitle">${esc(ev.summary||'(sem título)')}</div>${meta?'<div class="adur">'+esc(meta)+'</div>':''}</div><span class="adot${isNxt?' next':''}"></span></div>`;
+  }).join('');
+}
+
+async function loadChart(){
+  const today=new Date();
+  const days=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  const labels=[],ps=[];
+  for(let i=0;i<7;i++){
+    const d=new Date(today);d.setDate(today.getDate()-6+i);
+    const nd=new Date(d);nd.setDate(d.getDate()+1);
+    labels.push(days[d.getDay()]+' '+d.getDate()+'/'+(d.getMonth()+1).toString().padStart(2,'0'));
+    ps.push(gf('https://gmail.googleapis.com/gmail/v1/users/me/messages?q=after:'+fmtD(d)+' before:'+fmtD(nd)+'&maxResults=1').then(r=>r.resultSizeEstimate??0).catch(()=>0));
+  }
+  const data=await Promise.all(ps);
+  document.getElementById('chsub').textContent='Últimos 7 dias — dados reais';
+  initChart(data,labels);
+}
+
+function initChart(data,labels){
+  const ctx=document.getElementById('emailChart').getContext('2d');
+  const bc=data.map((_,i)=>i===data.length-1?'rgba(124,106,255,.95)':'rgba(124,106,255,.35)');
+  const bb=data.map((_,i)=>i===data.length-1?'#a78bfa':'rgba(124,106,255,.6)');
+  if(chart)chart.destroy();
+  chart=new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:'Emails',data,backgroundColor:bc,borderColor:bb,borderWidth:1.5,borderRadius:8,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:900,easing:'easeOutQuart'},plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c1e28',borderColor:'rgba(255,255,255,.1)',borderWidth:1,titleColor:'#f0f1f6',bodyColor:'#9ca3b0',padding:12,cornerRadius:10,callbacks:{label:c=>` ${c.parsed.y} emails`}}},scales:{x:{grid:{color:'rgba(255,255,255,.04)'},border:{color:'transparent'},ticks:{color:'#6b7080',font:{family:"'Inter',sans-serif",size:11}}},y:{grid:{color:'rgba(255,255,255,.05)'},border:{color:'transparent'},ticks:{color:'#6b7080',font:{family:"'Inter',sans-serif",size:11},stepSize:5},beginAtZero:true}}}});
+}
+
+async function gf(url){
+  const r=await fetch(url,{headers:{Authorization:'Bearer '+tok}});
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  return r.json();
+}
+function sk(id,on){const el=document.getElementById(id);on?el.classList.add('sk'):el.classList.remove('sk');}
+function ft(iso){return new Date(iso).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
+function fmtD(d){return d.getFullYear()+'/'+(d.getMonth()+1).toString().padStart(2,'0')+'/'+d.getDate().toString().padStart(2,'0');}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),5000);}
+</script>
+</body>
+</html>
