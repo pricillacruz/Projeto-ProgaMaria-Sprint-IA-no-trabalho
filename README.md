@@ -1,4 +1,4 @@
-# Personal Morning Productivity Dashboard
+# Painel de Produtividade Matinal Pessoal
 
 Um dashboard pessoal moderno e dinâmico, focado em produtividade para o início do dia. O projeto integra-se diretamente com as APIs do Google (Gmail, Calendar e Tasks) para fornecer um resumo em tempo real da sua rotina diária assim que você acorda.
 
